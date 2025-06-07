@@ -3,20 +3,20 @@ from utils.logger import logger
 from data.raw.daily_ohlc import DailyOHLC
 from source.kraken_rest_api import KrakenRestAPI
 import pandas as pd
+from minio_object_storage.minio_ops import MinioOPS
 
 class DataPipeline:
     def __init__(self):
-        self.start_date = "2009-01-01"
-        self.end_date = datetime.now().strftime("%Y-%m-%d")
+        self.start_date = datetime(2009, 1, 1)
+        self.current_date = datetime.now()
     def run(self):
         logger.info("Starting data pipeline ingestion process...")
-        logger.info(f"Data will be ingested from {self.start_date} to {self.end_date}")
+        logger.info(f"Data will be ingested from {self.start_date.strftime('%Y-%m-%d')} to {self.current_date.strftime('%Y-%m-%d')}")
         try:
             logger.info("Ingesting data from Kraken REST API...")
-            
             # Here you would typically call the Kraken REST API to fetch data
             kraken_rest_api = KrakenRestAPI()
-            response = kraken_rest_api.get_ohlc_data(pair="XXBTZUSD", interval=1440, since=int(datetime.strptime(self.start_date, "%Y-%m-%d").timestamp()))
+            response = kraken_rest_api.get_ohlc_data(pair="XXBTZUSD", interval=60, since=int(self.start_date.timestamp()))
             data = response.get('result', {}).get('XXBTZUSD', [])
             
             data = [
@@ -32,12 +32,16 @@ class DataPipeline:
                 ).model_dump() 
                 for item in data
             ]  # use pydantic model for data validation and then convert it into a dictionary
+            logger.info("Loaded OHLC Hourly Data from Kraken REST API")
             
-            df = pd.DataFrame(data)
+            # Create file to 
+            pd.DataFrame(data).to_parquet(f"tmp/{self.current_date.strftime('%Y%m%d')}_ohlc_hourly.parquet", index=False)
+            logger.info("Save OHLC Hourly Data from Kraken REST API")
 
             # Simulate writing data to object storage
-            logger.info("Writing data to object storage...")
-            
+            minio_ops = MinioOPS("localhost:9000", "admin", "nonprodpassword")
+            minio_ops.create_bucket("bitcoin-ohlc-daily")
+            minio_ops.write_object("bitcoin-ohlc-daily", destination_file=f"{self.current_date.strftime('%Y%m%d')}_ohlc_hourly.parquet", source_file=f"tmp/{self.current_date.strftime('%Y%m%d')}_ohlc_hourly.parquet")
             
             logger.info("Data ingestion process completed successfully.")
         except Exception as e:
