@@ -1,0 +1,28 @@
+services:
+  minio:
+    image: quay.io/minio/minio
+    container_name: ai_agent_crypto_analyzer_minio
+    ports:
+    - 9000:9000
+    - 9001:9001
+    volumes:
+      - minio_data:/mnt/data
+    env_file:
+      - .env
+    command: server /data --console-address ":9001"
+
+  timescaledb:
+    image: timescale/timescaledb-ha:pg17
+    container_name: ai_agent_crypto_analyzer_timescaledb
+    ports:
+      - 5432:5432
+    volumes:
+      - timescaledb_data:/home/postgres/pgdata/data
+    env_file:
+      - .env
+  
+volumes:
+  minio_data:
+    driver: local
+  timescaledb_data:
+    driver: local
