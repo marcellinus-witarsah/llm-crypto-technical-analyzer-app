@@ -66,8 +66,3 @@ class DataPipeline:
                 f"An error occurred during the data pipeline ingestion process: {e}"
             )
             return
-
-
-if __name__ == "__main__":
-    pipeline = DataPipeline(pair="XXBTZUSD", batchdate=datetime.now())
-    pipeline.run()
