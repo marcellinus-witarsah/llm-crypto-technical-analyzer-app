@@ -12,8 +12,8 @@ class TimescaleDBOps:
             dbname=os.getenv("POSTGRES_DB"),
             user=os.getenv("POSTGRES_USER"),
             password=os.getenv("POSTGRES_PASSWORD"),
-            host="localhost",
-            port=5432,
+            host=os.getenv("POSTGRES_HOST"),
+            port=os.getenv("POSTGRES_PORT"),
         )
 
     def create_table(self, table_name: str, columns: dict, primary_key=None):
@@ -67,17 +67,55 @@ class TimescaleDBOps:
         except (psycopg2.DatabaseError, Exception) as error:
             logger.warning(error)
             self.__conn.rollback()
+    
+    def execute_query(self, query: sql.SQL):
+        try:
+            with self.__conn.cursor() as cursor:
+                cursor.execute(query)
+                self.__conn.commit()
+                logger.info(f"Query Execute Successfuly")
+        except (psycopg2.DatabaseError, Exception) as error:
+            logger.warning(error)
+            self.__conn.rollback()
+            
+    def executemany_query(self, query: sql.SQL, data: list):
+        try:
+            with self.__conn.cursor() as cursor:
+                cursor.executemany(query, data)
+                self.__conn.commit()
+                logger.info(f"Query Execute Successfuly")
+        except (psycopg2.DatabaseError, Exception) as error:
+            logger.warning(error)
+            self.__conn.rollback()
 
-    def insert_data(self, table_name, columns, values):
+    def insert_data(self, table_name: str, columns: list, values: list, conflict_columns: list):
         """Insert data into the TimescaleDB database"""
         try:
             with self.__conn.cursor() as cursor:
                 query = sql.SQL(
-                    "INSERT INTO {table_name} ({columns}) VALUES ({values})"
+                    """
+                    INSERT INTO {table_name} ({columns}) 
+                    VALUES ({values})
+                    ON CONFLICT ({conflict_columns})
+                    DO UPDATE SET
+                        {updates}
+                    """
                 ).format(
                     table_name=sql.Identifier(table_name),
                     columns=sql.SQL(", ").join(map(sql.Identifier, columns)),
                     values=sql.SQL(", ").join(sql.Literal(value) for value in values),
+                    conflict_columns=sql.SQL(",").join(
+                        [
+                            sql.SQL("{column}").format(column=sql.Identifier(column)) 
+                            for column in conflict_columns
+                        ]
+                    ),
+                    updates = sql.SQL(",").join(
+                        [
+                            sql.SQL("{column} = EXCLUDED.{column}").format(column=sql.Identifier(column)) 
+                            for column in columns if column not in conflict_columns
+                        ]
+                    )
                 )
                 cursor.execute(query)
                 self.__conn.commit()
@@ -86,48 +124,50 @@ class TimescaleDBOps:
             logger.warning(error)
             self.__conn.rollback()
     
-    def batch_insert_data(self, table_name: str, columns: tuple, data: list):
+    def batch_insert_data(
+        self, 
+        table: str, 
+        schema: str, 
+        columns: tuple, 
+        data: list, 
+        conflict_columns: list
+    ):
         """Insert data into the TimescaleDB database"""
         try:
             with self.__conn.cursor() as cursor:
-                query = sql.SQL(
-                    "INSERT INTO {table_name} ({columns}) VALUES ({values})"
-                ).format(
-                    table_name=sql.Identifier(table_name),
-                    columns=sql.SQL(", ").join(map(sql.Identifier, columns)),
-                    values=sql.SQL(", ").join(sql.Placeholder() for _ in columns)
-                )
-                cursor.executemany(query, data)
-                self.__conn.commit()
-                logger.info(f"Data inserted into {table_name} successfully.")
-        except (psycopg2.DatabaseError, Exception) as error:
-            logger.warning(error)
-            self.__conn.rollback()
-    
-    def batch_insert_data(self, table_name: str, columns: tuple, data: list, conflict_column: str):
-        """Insert data into the TimescaleDB database"""
-        try:
-            with self.__conn.cursor() as cursor:
+                # Set schema
+                query = sql.SQL("SET search_path TO {schema}").format(schema=sql.Identifier(schema));
+                cursor.execute(query);
+                
+                # Insert Data
                 query = sql.SQL(
                     """
-                    INSERT INTO {table_name} ({columns}) 
+                    INSERT INTO {table} ({columns}) 
                     VALUES ({values})
-                    ON CONFLICT ({conflict_column})
+                    ON CONFLICT ({conflict_columns})
                     DO UPDATE SET
                         {updates}
                     """
                 ).format(
-                    table_name=sql.Identifier(table_name),
+                    table=sql.Identifier(table),
                     columns=sql.SQL(", ").join(map(sql.Identifier, columns)),
                     values=sql.SQL(", ").join(sql.Placeholder() for _ in columns),
-                    conflict_column=sql.Identifier(conflict_column),
+                    conflict_columns=sql.SQL(",").join(
+                        [
+                            sql.SQL("{column}").format(column=sql.Identifier(column)) 
+                            for column in conflict_columns
+                        ]
+                    ),
                     updates = sql.SQL(",").join(
-                        [sql.SQL("{column} = EXCLUDED.{column}").format(column=sql.Identifier(column)) for column in columns if column != conflict_column ]
+                        [
+                            sql.SQL("{column} = EXCLUDED.{column}").format(column=sql.Identifier(column)) 
+                            for column in columns if column not in conflict_columns
+                        ]
                     )
                 )
                 cursor.executemany(query, data)
                 self.__conn.commit()
-                logger.info(f"Data inserted into {table_name} successfully.")
+                logger.info(f"Data inserted into {table} successfully.")
         except (psycopg2.DatabaseError, Exception) as error:
             logger.warning(error)
             self.__conn.rollback()
@@ -163,123 +203,3 @@ class TimescaleDBOps:
             logger.info("TimescaleDB connection closed.")
         else:
             logger.info("No connection to close.")
-
-    def create_continuous_aggregation(
-        self, source_table, view, columns, group_by_columns
-    ):
-        """Create a continuous aggregation view in the TimescaleDB database."""
-        try:
-            with self.__conn.cursor() as cursor:
-                query = sql.SQL(
-                    """
-                    CREATE MATERIALIZED VIEW {view}
-                    WITH (timescaledb.continuous) AS
-                    SELECT
-                        {columns}
-                    FROM {source_table}
-                    GROUP BY {group_by_columns}
-                    WITH NO DATA;
-                """
-                ).format(
-                    view=sql.Identifier(view),
-                    columns=sql.SQL(", ").join(map(sql.SQL, columns)),
-                    source_table=sql.Identifier(source_table),
-                    group_by_columns=sql.SQL(", ").join(map(sql.SQL, group_by_columns)),
-                )
-                cursor.execute(query)
-                self.__conn.commit()
-                logger.info(f"View {view} created successfully.")
-        except (psycopg2.DatabaseError, Exception) as error:
-            logger.warning(error)
-            self.__conn.rollback()
-
-    def create_automatic_refresh_policy(
-        self, view, start_offset, end_offset, scheduler_interval
-    ):
-        """Create automation for updating continuous aggregated view in the TimescaleDB database."""
-        try:
-            with self.__conn.cursor() as cursor:
-                query = sql.SQL(
-                    """
-                    SELECT add_continuous_aggregate_policy(
-                        {view},
-                        start_offset => INTERVAL {start_offset},
-                        end_offset => INTERVAL {end_offset},
-                        schedule_interval => INTERVAL {scheduler_interval}
-                    )
-                """
-                ).format(
-                    view=sql.Literal(view),
-                    start_offset=sql.Literal(start_offset),
-                    end_offset=sql.Literal(end_offset),
-                    scheduler_interval=sql.Literal(scheduler_interval),
-                )
-                cursor.execute(query)
-                self.__conn.commit()
-                logger.info(f"View {view} created successfully.")
-        except (psycopg2.DatabaseError, Exception) as error:
-            logger.warning(error)
-            self.__conn.rollback()
-
-    def create_notify(self, channel_name, function_name):
-        """Create a notify function in the TimescaleDB database"""
-        try:
-            with self.__conn.cursor() as cursor:
-                query = sql.SQL(
-                    """
-                    CREATE OR REPLACE FUNCTION {function_name}()
-                    RETURNS TRIGGER AS $$
-                    BEGIN
-                        PERFORM pg_notify({channel_name}, row_to_json(NEW)::text);
-                        RETURN NEW;
-                    END;
-                    $$ LANGUAGE plpgsql;
-                """
-                ).format(
-                    function_name=sql.Identifier(function_name),
-                    channel_name=sql.Literal(channel_name),
-                )
-                cursor.execute(query)
-                self.__conn.commit()
-                logger.info(f"Notify function {function_name} created successfully.")
-        except (psycopg2.DatabaseError, Exception) as error:
-            logger.warning(f"Error creating notify function {function_name}: {error}")
-            self.__conn.rollback()
-
-    def create_trigger(self, table_name, trigger_name, function_name):
-        """Create a trigger in the TimescaleDB database"""
-        try:
-            with self.__conn.cursor() as cursor:
-                query = sql.SQL(
-                    """
-                    CREATE TRIGGER {trigger_name}
-                    AFTER INSERT ON {table_name}
-                    FOR EACH ROW
-                    EXECUTE FUNCTION {function_name}();
-                """
-                ).format(
-                    trigger_name=sql.Identifier(trigger_name),
-                    table_name=sql.Identifier(table_name),
-                    function_name=sql.Identifier(function_name),
-                )
-                cursor.execute(query)
-                self.__conn.commit()
-                logger.info(f"Trigger {trigger_name} created successfully.")
-        except (psycopg2.DatabaseError, Exception) as error:
-            logger.warning(error)
-            self.__conn.rollback()
-
-    def listen_notification(self, channel_name):
-        try:
-            with self.__conn.cursor() as cursor:
-                query = sql.SQL("LISTEN {channel_name}").format(
-                    channel_name=sql.Identifier(channel_name)
-                )
-                cursor.execute(query)
-                self.__conn.commit()
-                logger.info(f"Listening to notification channel {channel_name}.")
-        except (psycopg2.DatabaseError, Exception) as error:
-            logger.warning(
-                f"Error listening to notification channel {channel_name}: {error}"
-            )
-            self.__conn.rollback()

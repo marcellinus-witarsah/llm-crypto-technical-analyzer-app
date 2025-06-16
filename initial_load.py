@@ -1,12 +1,12 @@
-from pipelines.source_to_minio.kraken_ohlc_four_hourly import DataPipeline as SourceToMinioDataPipeline
-from pipelines.minio_to_timescaledb.ohlc_four_hourly import DataPipeline as MinioToTimescaleDBDataPipeline
+from pipelines.source_to_minio.kraken_ohlc import DataPipeline as SourceToMinioDataPipeline
+from pipelines.bronze.ohlc import DataPipeline as MinioToTimescaleDBDataPipeline
 from datetime import datetime
 from src.utils.minio_ops import MinioOPS
 import os
 
 if __name__ == "__main__":
     # Load data from local file to MinIO
-    file = "/20131006_20250331_XXBTZUSD_ohlc_four_hourly.parquet"
+    file = "20131006_20250331_XXBTZUSD_ohlc_240.parquet"
     minio_ops = MinioOPS()
     minio_ops.create_bucket(os.getenv("BUCKET_NAME"))
     minio_ops.write_object(
@@ -19,7 +19,7 @@ if __name__ == "__main__":
     # Load data from local file to MinIO
     pipeline = SourceToMinioDataPipeline(
         pair="XXBTZUSD", 
-        interval=240, 
+        interval=240,
         start_date=datetime(2025, 4, 1), 
         end_date=datetime.now()
     )
@@ -28,6 +28,7 @@ if __name__ == "__main__":
     # Load from MinIO to TimescaleDB
     pipeline = MinioToTimescaleDBDataPipeline(
         pair="XXBTZUSD",
+        interval=240,
         batch_size=1000,
         start_date=datetime(2013, 10, 6), 
         end_date=datetime(2025, 3, 31)
@@ -36,6 +37,7 @@ if __name__ == "__main__":
     
     pipeline = MinioToTimescaleDBDataPipeline(
         pair="XXBTZUSD", 
+        interval=240,
         batch_size=1000,
         start_date=datetime(2025, 4, 1), 
         end_date=datetime.now()

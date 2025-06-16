@@ -26,6 +26,13 @@ if __name__=="__main__":
         required=True,
         help="Pair of the cryptocurrency"
     )
+    
+    parser.add_argument(
+        "--interval",
+        type=int,
+        required=True,
+        help="Interval in minutes"
+    )
 
     parser.add_argument(
         "--start-date",
@@ -43,13 +50,15 @@ if __name__=="__main__":
     
     args = parser.parse_args()
     pair = args.pair
+    interval = args.interval
     start_date = datetime.strptime(args.start_date, '%Y-%m-%d')
     end_date = datetime.strptime(args.end_date, '%Y-%m-%d')
     
     # Load data from local file to MinIO
     pipeline_module = get_pipeline_module(args.pipeline_name)
     pipeline = pipeline_module.DataPipeline(
-        pair=pair, 
+        pair=pair,
+        interval=interval,
         start_date=start_date, 
         end_date=end_date
     )
