@@ -173,20 +173,17 @@ class TimescaleDBOps:
             self.__conn.rollback()
 
 
-    def read_data(self, table_name, time_bucket="1m"):
+    def read_data(self, table_name):
         """Read data from the TimescaleDB database"""
         try:
             with self.__conn.cursor() as cursor:
-                select_query = f"""
-                SELECT
-                    timestamp_{time_bucket} as ts, 
-                    symbol,
-                    open(candlestick) as open_price,
-                    high(candlestick) as high_price,
-                    low(candlestick) as low_price,
-                    close(candlestick) as close_price
-                FROM {table_name}
+                select_query = sql.SQL("""
+                    SELECT * FROM {table_name}
                 """
+                ).format(
+                    table_name = sql.Identifier(table_name.split('.')[0], table_name.split('.')[1]),
+
+                )
                 cursor.execute(select_query)
                 rows = cursor.fetchall()
                 columns = [desc[0] for desc in cursor.description]

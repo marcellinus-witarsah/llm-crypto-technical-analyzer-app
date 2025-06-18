@@ -64,8 +64,73 @@ create table silver.ohlc_monthly (
     count INTEGER,
     primary key (date, pair)
 );
-select create_hypertable('silver.ohlc_monthly', by_range('date', INTERVAL '1 month'));
 
+-- Create gold.ohlc_ta_daily
+select create_hypertable('silver.ohlc_monthly', by_range('date', INTERVAL '1 month'));
+drop table if exists gold.ohlc_ta_daily;
+create table if not exists gold.ohlc_ta_daily(
+    date DATE,
+    pair TEXT,
+    open DOUBLE PRECISION,
+    high DOUBLE PRECISION,
+    low DOUBLE PRECISION,
+    close DOUBLE PRECISION,
+    volume DOUBLE PRECISION,
+    count INTEGER,
+    ema_13 DOUBLE PRECISION,
+    ema_21 DOUBLE PRECISION,
+    stochastic_percentage_k DOUBLE PRECISION,
+    stochastic_percentage_d DOUBLE PRECISION,
+    macd DOUBLE PRECISION,
+    macd_signal_line DOUBLE PRECISION,
+    macd_bar DOUBLE PRECISION,
+    primary key (date, pair)
+);
+select create_hypertable('gold.ohlc_ta_daily', by_range('date', INTERVAL '1 day'));
+
+-- Create gold.ohlc_ta_weekly
+drop table if exists gold.ohlc_ta_weekly;
+create table if not exists gold.ohlc_ta_weekly(
+    date DATE,
+    pair TEXT,
+    open DOUBLE PRECISION,
+    high DOUBLE PRECISION,
+    low DOUBLE PRECISION,
+    close DOUBLE PRECISION,
+    volume DOUBLE PRECISION,
+    count INTEGER,
+    ema_13 DOUBLE PRECISION,
+    ema_21 DOUBLE PRECISION,
+    stochastic_percentage_k DOUBLE PRECISION,
+    stochastic_percentage_d DOUBLE PRECISION,
+    macd DOUBLE PRECISION,
+    macd_signal_line DOUBLE PRECISION,
+    macd_bar DOUBLE PRECISION,
+    primary key (date, pair)
+);
+select create_hypertable('gold.ohlc_ta_weekly', by_range('date', INTERVAL '1 week'));
+
+-- Create gold.ohlc_ta_monthly
+drop table if exists gold.ohlc_ta_monthly;
+create table if not exists gold.ohlc_ta_monthly(
+    date DATE,
+    pair TEXT,
+    open DOUBLE PRECISION,
+    high DOUBLE PRECISION,
+    low DOUBLE PRECISION,
+    close DOUBLE PRECISION,
+    volume DOUBLE PRECISION,
+    count INTEGER,
+    ema_13 DOUBLE PRECISION,
+    ema_21 DOUBLE PRECISION,
+    stochastic_percentage_k DOUBLE PRECISION,
+    stochastic_percentage_d DOUBLE PRECISION,
+    macd DOUBLE PRECISION,
+    macd_signal_line DOUBLE PRECISION,
+    macd_bar DOUBLE PRECISION,
+    primary key (date, pair)
+);
+select create_hypertable('gold.ohlc_ta_monthly', by_range('date', INTERVAL '1 month'));
 
 -- Query for inserting from bronze.ohlc to silver.ohlc_daily
 select * from bronze.ohlc order by time desc;
