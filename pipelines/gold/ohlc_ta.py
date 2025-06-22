@@ -7,16 +7,22 @@ class DataPipeline:
     def __init__(
         self, 
         source: str, 
-        target: str, 
+        target: str,
+        start_date: datetime,
+        end_date: datetime,
     ):
         self.source = source
         self.target = target
+        self.start_date = start_date
+        self.end_date = end_date
 
     def run(self):
         # Read from database
         db_ops = TimescaleDBOps()
         columns, data = db_ops.read_data(self.source)
         df = pd.DataFrame(data=data, columns=columns)
+        df["date"] = pd.to_datetime(df["date"])
+        df = df[(df["date"] >= self.start_date) & (df["date"] <= self.end_date)]
         
         # EMA
         df["ema_13"] = df["close"].ewm(span=13, adjust=False).mean()
@@ -51,6 +57,3 @@ class DataPipeline:
         db_ops.close_connection()
         logger.info("Successfully run script!")
 
-if __name__=='__main__':
-    data_pipeline = DataPipeline("silver.ohlc_monthly", "gold.ohlc_ta_monthly")
-    data_pipeline.run()
