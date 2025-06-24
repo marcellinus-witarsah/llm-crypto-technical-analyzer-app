@@ -23,6 +23,7 @@ class DataPipeline:
         df = pd.DataFrame(data=data, columns=columns)
         df["date"] = pd.to_datetime(df["date"])
         df = df[(df["date"] >= self.start_date) & (df["date"] <= self.end_date)]
+        df = df.sort_values("date").reset_index(drop=True)  # sort by date ensure that the calculations are correct
         
         # EMA
         df["ema_13"] = df["close"].ewm(span=13, adjust=False).mean()
@@ -47,6 +48,7 @@ class DataPipeline:
         df["macd_signal_line"] = macd_signal_line
         df["macd_bar"] = macd_bar
         
+        logger.info(df[df['date'] >= '2025-05-01'])
         db_ops.batch_insert_data(
             schema=self.target.split(".")[0],
             table=self.target.split(".")[1], 

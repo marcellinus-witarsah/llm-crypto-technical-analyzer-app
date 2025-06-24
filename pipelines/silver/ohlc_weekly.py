@@ -21,7 +21,7 @@ class DataPipeline:
         db_ops = TimescaleDBOps()
         query = sql.SQL(
             """
-            insert into {target}
+            INSERT INTO {target}
             (
                 SELECT
                     time_bucket('1 week', time at time zone 'Asia/Jakarta') AS date,

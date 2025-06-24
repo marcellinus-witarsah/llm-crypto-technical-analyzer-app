@@ -1,4 +1,5 @@
 -atplotlib==3.10.3
+anthropic==0.54.0
 black==25.1.0
 ipykernel==6.29.5
 minio==7.2.15
@@ -8,6 +9,5 @@ pip-chill==1.0.3
 plotly==6.1.2
 psycopg2==2.9.10
 pyarrow==20.0.0
-pydantic==2.11.5
 python-dotenv==1.1.0
 requests==2.32.3
