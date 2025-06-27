@@ -1,7 +1,9 @@
-from minio import Minio
-from src.utils.logger import logger
-from dotenv import load_dotenv
 import os
+
+from dotenv import load_dotenv
+from minio import Minio
+
+from src.utils.logger import logger
 
 
 class MinioOPS:

@@ -1,6 +1,7 @@
 import argparse
-from datetime import datetime
 import importlib
+from datetime import datetime
+
 
 def get_pipeline_module(pipeline_name: str):
     try:
@@ -10,67 +11,56 @@ def get_pipeline_module(pipeline_name: str):
     return data_pipeline
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    
+
     parser.add_argument(
-        "--pipeline-name",
-        type=str,
-        required=True,
-        help="Name of the pipeline"
+        "--pipeline-name", type=str, required=True, help="Name of the pipeline"
     )
-    
+
     parser.add_argument(
-        "--pair",
-        type=str,
-        required=True,
-        help="Pair of the cryptocurrency"
+        "--pair", type=str, required=True, help="Pair of the cryptocurrency"
     )
-    
+
     parser.add_argument(
-        "--interval",
-        type=int,
-        required=True,
-        help="Interval in minutes"
+        "--interval", type=int, required=True, help="Interval in minutes"
     )
 
     parser.add_argument(
         "--start-date",
         type=str,
         required=True,
-        help="The start date to process the data in YYYY-MM-DD format"
+        help="The start date to process the data in YYYY-MM-DD format",
     )
 
     parser.add_argument(
         "--end-date",
         type=str,
         required=True,
-        help="The end date to process the data in YYYY-MM-DD format"
+        help="The end date to process the data in YYYY-MM-DD format",
     )
-    
+
     parser.add_argument(
         "--batch-size",
         type=int,
         required=True,
-        help="The end date to process the data in YYYY-MM-DD format"
+        help="The end date to process the data in YYYY-MM-DD format",
     )
-    
-    
+
     args = parser.parse_args()
     pair = args.pair
     interval = args.interval
-    start_date = datetime.strptime(args.start_date, '%Y-%m-%d')
-    end_date = datetime.strptime(args.end_date, '%Y-%m-%d')
+    start_date = datetime.strptime(args.start_date, "%Y-%m-%d")
+    end_date = datetime.strptime(args.end_date, "%Y-%m-%d")
     batch_size = args.batch_size
-    
-    
+
     # Load data from local file to MinIO
     pipeline_module = get_pipeline_module(args.pipeline_name)
     pipeline = pipeline_module.DataPipeline(
         pair=pair,
         interval=interval,
-        start_date=start_date, 
+        start_date=start_date,
         end_date=end_date,
-        batch_size=batch_size
+        batch_size=batch_size,
     )
     pipeline.run()

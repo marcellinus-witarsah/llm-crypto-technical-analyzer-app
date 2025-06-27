@@ -1,21 +1,18 @@
 import os
-import pandas as pd
 from datetime import datetime, timedelta
-from src.utils.logger import logger
-from src.schemas.ohlc import OHLC
-from src.extractors.kraken import KrakenRestAPI
-from src.utils.minio_ops import MinioOPS
+
+import pandas as pd
 from dotenv import load_dotenv
+
+from src.extractors.kraken import KrakenRestAPI
+from src.schemas.ohlc import OHLC
+from src.utils.logger import logger
+from src.utils.minio_ops import MinioOPS
 
 
 class DataPipeline:
     def __init__(
-        self, 
-        pair: str,
-        interval: int,
-        start_date: datetime,
-        end_date: datetime
-        
+        self, pair: str, interval: int, start_date: datetime, end_date: datetime
     ):
         load_dotenv()
         self.pair = pair
