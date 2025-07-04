@@ -1,15 +1,17 @@
 from datetime import datetime
+
+from psycopg2 import sql
+
 from src.utils.logger import logger
 from src.utils.timescaledb_ops import TimescaleDBOps
-from psycopg2 import sql
 
 
 class DataPipeline:
     def __init__(
-        self, 
-        source: str, 
-        target: str, 
-        start_date: datetime, 
+        self,
+        source: str,
+        target: str,
+        start_date: datetime,
         end_date: datetime,
     ):
         self.source = source
@@ -21,7 +23,7 @@ class DataPipeline:
         db_ops = TimescaleDBOps()
         query = sql.SQL(
             """
-            insert into {target}
+            INSERT INTO {target}
             (
                 SELECT
                     time_bucket('1 week', time at time zone 'Asia/Jakarta') AS date,
@@ -47,10 +49,10 @@ class DataPipeline:
             ;
             """
         ).format(
-            source = sql.Identifier(self.source.split('.')[0], self.source.split('.')[1]),
-            target = sql.Identifier(self.target.split('.')[0], self.target.split('.')[1]),
-            start_date = sql.Literal(self.start_date),
-            end_date = sql.Literal(self.end_date)
+            source=sql.Identifier(self.source.split(".")[0], self.source.split(".")[1]),
+            target=sql.Identifier(self.target.split(".")[0], self.target.split(".")[1]),
+            start_date=sql.Literal(self.start_date),
+            end_date=sql.Literal(self.end_date),
         )
         db_ops.execute_query(query)
         db_ops.close_connection()
@@ -62,6 +64,6 @@ if __name__ == "__main__":
         source="bronze.ohlc",
         target="silver.ohlc_weekly",
         start_date="2025-01-01",
-        end_date="2025-06-15"
+        end_date="2025-06-15",
     )
     pipeline.run()

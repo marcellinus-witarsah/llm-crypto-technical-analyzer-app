@@ -1,9 +1,11 @@
-import psycopg2
-from psycopg2 import sql
-from src.utils.logger import logger
-from dotenv import load_dotenv
 import os
-from psycopg2 import extras
+
+import psycopg2
+from dotenv import load_dotenv
+from psycopg2 import extras, sql
+
+from src.utils.logger import logger
+
 
 class TimescaleDBOps:
     def __init__(self):
@@ -67,7 +69,7 @@ class TimescaleDBOps:
         except (psycopg2.DatabaseError, Exception) as error:
             logger.warning(error)
             self.__conn.rollback()
-    
+
     def execute_query(self, query: sql.SQL):
         try:
             with self.__conn.cursor() as cursor:
@@ -77,7 +79,7 @@ class TimescaleDBOps:
         except (psycopg2.DatabaseError, Exception) as error:
             logger.warning(error)
             self.__conn.rollback()
-            
+
     def executemany_query(self, query: sql.SQL, data: list):
         try:
             with self.__conn.cursor() as cursor:
@@ -88,7 +90,9 @@ class TimescaleDBOps:
             logger.warning(error)
             self.__conn.rollback()
 
-    def insert_data(self, table_name: str, columns: list, values: list, conflict_columns: list):
+    def insert_data(
+        self, table_name: str, columns: list, values: list, conflict_columns: list
+    ):
         """Insert data into the TimescaleDB database"""
         try:
             with self.__conn.cursor() as cursor:
@@ -106,16 +110,19 @@ class TimescaleDBOps:
                     values=sql.SQL(", ").join(sql.Literal(value) for value in values),
                     conflict_columns=sql.SQL(",").join(
                         [
-                            sql.SQL("{column}").format(column=sql.Identifier(column)) 
+                            sql.SQL("{column}").format(column=sql.Identifier(column))
                             for column in conflict_columns
                         ]
                     ),
-                    updates = sql.SQL(",").join(
+                    updates=sql.SQL(",").join(
                         [
-                            sql.SQL("{column} = EXCLUDED.{column}").format(column=sql.Identifier(column)) 
-                            for column in columns if column not in conflict_columns
+                            sql.SQL("{column} = EXCLUDED.{column}").format(
+                                column=sql.Identifier(column)
+                            )
+                            for column in columns
+                            if column not in conflict_columns
                         ]
-                    )
+                    ),
                 )
                 cursor.execute(query)
                 self.__conn.commit()
@@ -123,22 +130,24 @@ class TimescaleDBOps:
         except (psycopg2.DatabaseError, Exception) as error:
             logger.warning(error)
             self.__conn.rollback()
-    
+
     def batch_insert_data(
-        self, 
-        table: str, 
-        schema: str, 
-        columns: tuple, 
-        data: list, 
-        conflict_columns: list
+        self,
+        table: str,
+        schema: str,
+        columns: tuple,
+        data: list,
+        conflict_columns: list,
     ):
         """Insert data into the TimescaleDB database"""
         try:
             with self.__conn.cursor() as cursor:
                 # Set schema
-                query = sql.SQL("SET search_path TO {schema}").format(schema=sql.Identifier(schema));
-                cursor.execute(query);
-                
+                query = sql.SQL("SET search_path TO {schema}").format(
+                    schema=sql.Identifier(schema)
+                )
+                cursor.execute(query)
+
                 # Insert Data
                 query = sql.SQL(
                     """
@@ -154,16 +163,19 @@ class TimescaleDBOps:
                     values=sql.SQL(", ").join(sql.Placeholder() for _ in columns),
                     conflict_columns=sql.SQL(",").join(
                         [
-                            sql.SQL("{column}").format(column=sql.Identifier(column)) 
+                            sql.SQL("{column}").format(column=sql.Identifier(column))
                             for column in conflict_columns
                         ]
                     ),
-                    updates = sql.SQL(",").join(
+                    updates=sql.SQL(",").join(
                         [
-                            sql.SQL("{column} = EXCLUDED.{column}").format(column=sql.Identifier(column)) 
-                            for column in columns if column not in conflict_columns
+                            sql.SQL("{column} = EXCLUDED.{column}").format(
+                                column=sql.Identifier(column)
+                            )
+                            for column in columns
+                            if column not in conflict_columns
                         ]
-                    )
+                    ),
                 )
                 cursor.executemany(query, data)
                 self.__conn.commit()
@@ -172,17 +184,18 @@ class TimescaleDBOps:
             logger.warning(error)
             self.__conn.rollback()
 
-
     def read_data(self, table_name):
         """Read data from the TimescaleDB database"""
         try:
             with self.__conn.cursor() as cursor:
-                select_query = sql.SQL("""
+                select_query = sql.SQL(
+                    """
                     SELECT * FROM {table_name}
                 """
                 ).format(
-                    table_name = sql.Identifier(table_name.split('.')[0], table_name.split('.')[1]),
-
+                    table_name=sql.Identifier(
+                        table_name.split(".")[0], table_name.split(".")[1]
+                    ),
                 )
                 cursor.execute(select_query)
                 rows = cursor.fetchall()

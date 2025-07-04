@@ -1,15 +1,24 @@
+import os
 from datetime import datetime
+from io import BytesIO
+
+import pandas as pd
+from dotenv import load_dotenv
+
 from src.utils.logger import logger
 from src.utils.minio_ops import MinioOPS
-from io import BytesIO
-import pandas as pd
 from src.utils.timescaledb_ops import TimescaleDBOps
-from dotenv import load_dotenv
-import os
 
 
 class DataPipeline:
-    def __init__(self, pair: str, interval: int, batch_size: int, start_date: datetime, end_date: datetime):
+    def __init__(
+        self,
+        pair: str,
+        interval: int,
+        batch_size: int,
+        start_date: datetime,
+        end_date: datetime,
+    ):
         load_dotenv()
         self.pair = pair
         self.interval = interval
@@ -29,7 +38,7 @@ class DataPipeline:
             minio_ops = MinioOPS()
             data = minio_ops.read_object(
                 bucket_name=os.getenv("BUCKET_NAME"),
-                object_name=f"{self.start_date.strftime('%Y%m%d')}_{self.end_date.strftime('%Y%m%d')}_{self.pair}_ohlc_{self.interval}.parquet"
+                object_name=f"{self.start_date.strftime('%Y%m%d')}_{self.end_date.strftime('%Y%m%d')}_{self.pair}_ohlc_{self.interval}.parquet",
             )
             df = pd.read_parquet(BytesIO(data))
 
@@ -39,7 +48,7 @@ class DataPipeline:
             # Implement batch insert
             db_ops = TimescaleDBOps()
             for idx in range(0, len(df), self.batch_size):
-                df_chunk = df.iloc[idx:idx+self.batch_size]
+                df_chunk = df.iloc[idx : idx + self.batch_size]
                 data = [
                     [
                         datetime.strftime(
@@ -53,16 +62,29 @@ class DataPipeline:
                         float(row["close"]),
                         float(row["volume"]),
                         int(row["count"]),
-                    ] for _, row in df_chunk.iterrows()
+                    ]
+                    for _, row in df_chunk.iterrows()
                 ]
                 db_ops.batch_insert_data(
                     "ohlc",
                     schema="bronze",
-                    columns=("time","interval","pair","open","high","low","close","count","volume"),
+                    columns=(
+                        "time",
+                        "interval",
+                        "pair",
+                        "open",
+                        "high",
+                        "low",
+                        "close",
+                        "count",
+                        "volume",
+                    ),
                     data=data,
-                    conflict_columns=["time", "pair"]
+                    conflict_columns=["time", "pair"],
                 )
             db_ops.close_connection()
             logger.info("Data ingestion process completed successfully.")
         except Exception as e:
-            logger.error(f"An error occurred during the data pipeline ingestion process: {e}")
+            logger.error(
+                f"An error occurred during the data pipeline ingestion process: {e}"
+            )
