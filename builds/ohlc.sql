@@ -137,14 +137,14 @@ select * from bronze.ohlc order by time desc;
 insert into silver.ohlc_daily 
 (
 	SELECT
-	    time_bucket('1 day', time at time zone 'Asia/Jakarta') AS date,
-	    pair,
-	    first(open, time) AS open,
-	    MAX(high) AS high,
-	    MIN(low) AS low,
-	    last(close, time) AS close,
-	    SUM(volume) AS volume,
-	    SUM(count) AS count
+        time_bucket('1 day', time at time zone 'Asia/Jakarta') AS date,
+        pair,
+        first(open, time) AS open,
+        MAX(high) AS high,
+        MIN(low) AS low,
+        last(close, time) AS close,
+        SUM(volume) AS volume,
+        SUM(count) AS count
 	FROM bronze.ohlc
 	where time_bucket('1 day', time at time zone 'Asia/Jakarta') >= '2025-06-01' 
 		and time_bucket('1 day', time at time zone 'Asia/Jakarta')<= '2025-06-15'
@@ -163,14 +163,14 @@ DO UPDATE SET
 insert into silver.ohlc_weekly
 (
 	SELECT
-	    time_bucket('1 week', time at time zone 'Asia/Jakarta') AS date,
-	    pair,
-	    first(open, time) AS open,
-	    MAX(high) AS high,
-	    MIN(low) AS low,
-	    last(close, time) AS close,
-	    SUM(volume) AS volume,
-	    SUM(count) AS count
+        time_bucket('1 week', time at time zone 'Asia/Jakarta') AS date,
+        pair,
+        first(open, time) AS open,
+        MAX(high) AS high,
+        MIN(low) AS low,
+        last(close, time) AS close,
+        SUM(volume) AS volume,
+        SUM(count) AS count
 	FROM bronze.ohlc
 	where time_bucket('1 week', time at time zone 'Asia/Jakarta') >= '2025-01-01' 
 		and time_bucket('1 week', time at time zone 'Asia/Jakarta')<= '2025-06-01'
@@ -189,14 +189,14 @@ DO UPDATE SET
 insert into silver.ohlc_monthly 
 (
 	SELECT
-	    time_bucket('1 month', time at time zone 'Asia/Jakarta') AS date,
-	    pair,
-	    first(open, time) AS open,
-	    MAX(high) AS high,
-	    MIN(low) AS low,
-	    last(close, time) AS close,
-	    SUM(volume) AS volume,
-	    SUM(count) AS count
+        time_bucket('1 month', time at time zone 'Asia/Jakarta') AS date,
+        pair,
+        first(open, time) AS open,
+        MAX(high) AS high,
+        MIN(low) AS low,
+        last(close, time) AS close,
+        SUM(volume) AS volume,
+        SUM(count) AS count
 	FROM bronze.ohlc
 	where time_bucket('1 month', time at time zone 'Asia/Jakarta') >= '2025-01-01' 
 	and time_bucket('1 month', time at time zone 'Asia/Jakarta')<= '2025-06-01'

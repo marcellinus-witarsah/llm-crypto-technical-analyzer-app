@@ -7,7 +7,7 @@ class KrakenRestAPI:
     def __init__(self):
         self.base_url = "https://api.kraken.com/0"
 
-    def get_ohlc_data(self, pair: str, interval: int, since: int) -> dict:
+    def get_ohlc_data(self, pair: str, interval: int, since: int) -> dict | None:
         """
         Fetch OHLC data for a given trading pair and interval.
 
