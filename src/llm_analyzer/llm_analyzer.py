@@ -1,16 +1,25 @@
-from langchain_anthropic import ChatAnthropic
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel
 
 from src.llm_analyzer.llm_strategy_interface import LLMStrategyInterface
-from src.model.analysis import Actions, Analysis
 
 
-class AnthropicLLMStrategy(LLMStrategyInterface):
-    def __init__(self, **kwargs):
-        super().__init__()
-        self.__llm = ChatAnthropic(**kwargs).with_structured_output(Analysis)
+class LLMAnalyzer:
+    # Define constructors
 
+    def __init__(self, llm_strategy: LLMStrategyInterface):
+        self.__llm_strategy = llm_strategy
+
+    # Define setters and getters
+    @property
+    def llm_strategy(self):
+        return self.__llm_strategy
+
+    @llm_strategy.setter
+    def set_llm_strategy(self, llm_strategy: LLMStrategyInterface):
+        self.__llm_strategy = llm_strategy
+
+    # Define abstract method for analysis
     def analyze(
         self,
         prompt_template: ChatPromptTemplate,
@@ -29,14 +38,9 @@ class AnthropicLLMStrategy(LLMStrategyInterface):
         Returns:
             dict | BaseModel: output from LLM.
         """
-        chain = prompt_template | self.__llm
-        return chain.invoke(
-            {
-                "image_base64": image_base64,
-                "pair": pair,
-                "timeframe": timeframe,
-                "actions": "\n".join(
-                    f"{num+1}. {action.value}" for num, action in enumerate(Actions)
-                ),
-            }
+        return self.llm_strategy.analyze(
+            prompt_template=prompt_template,
+            image_base64=image_base64,
+            pair=pair,
+            timeframe=timeframe,
         )

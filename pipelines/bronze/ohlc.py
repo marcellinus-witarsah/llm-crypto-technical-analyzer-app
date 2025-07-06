@@ -5,9 +5,9 @@ from io import BytesIO
 import pandas as pd
 from dotenv import load_dotenv
 
+from src.minio_ops import MinioOPS
+from src.timescaledb_ops import TimescaleDBOps
 from src.utils.logger import logger
-from src.utils.minio_ops import MinioOPS
-from src.utils.timescaledb_ops import TimescaleDBOps
 
 
 class DataPipeline:
@@ -31,21 +31,22 @@ class DataPipeline:
             f"Data will be ingested from MinIO to TimescaleDB ({self.start_date.strftime('%Y-%m-%d')} to {self.end_date.strftime('%Y-%m-%d')})"
         )
         try:
-            ####################################################################
-            # 1. READ DATA FROM MINIO
-            ####################################################################
-            logger.info("Ingesting data from MinIO ...")
+            # =========================================================================
+            # Read data from MinIO
+            # =========================================================================
+            logger.info("Reading data from MinIO ...")
             minio_ops = MinioOPS()
             data = minio_ops.read_object(
                 bucket_name=os.getenv("BUCKET_NAME"),
-                object_name=f"{self.start_date.strftime('%Y%m%d')}_{self.end_date.strftime('%Y%m%d')}_{self.pair}_ohlc_{self.interval}.parquet",
+                object_name=f"{self.start_date.strftime('%Y%m%d')}_{self.end_date.strftime('%Y%m%d')}_{self.pair}_ohlc_{self.interval}.parquet"
             )
             df = pd.read_parquet(BytesIO(data))
+            logger.info("Successfully read data from MinIO.")
 
-            ####################################################################
-            # 2. INSERT DATA INTO TIMESCALEDB
-            ####################################################################
-            # Implement batch insert
+            # =========================================================================
+            # Ingest data into TimescaleDB
+            # =========================================================================
+            logger.info("Ingesting data from to TimescaleDB ...")
             db_ops = TimescaleDBOps()
             for idx in range(0, len(df), self.batch_size):
                 df_chunk = df.iloc[idx : idx + self.batch_size]
@@ -83,7 +84,7 @@ class DataPipeline:
                     conflict_columns=["time", "pair"],
                 )
             db_ops.close_connection()
-            logger.info("Data ingestion process completed successfully.")
+            logger.info("Successfully ingested data from to TimescaleDB.")
         except Exception as e:
             logger.error(
                 f"An error occurred during the data pipeline ingestion process: {e}"

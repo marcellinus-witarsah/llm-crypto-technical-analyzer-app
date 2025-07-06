@@ -1,9 +1,17 @@
 import argparse
 import importlib
 from datetime import datetime
+from types import ModuleType
 
+def get_pipeline_module(pipeline_name: str) -> ModuleType:
+    """Get a pipeline by name inside the gold folder.
 
-def get_pipeline_module(pipeline_name: str):
+    Args:
+        pipeline_name (str): pipeline name.
+
+    Returns:
+        ModuleType: imported module.
+    """
     try:
         data_pipeline = importlib.import_module(f"pipelines.gold.{pipeline_name}")
     except ImportError:
@@ -12,6 +20,9 @@ def get_pipeline_module(pipeline_name: str):
 
 
 if __name__ == "__main__":
+    # =========================================================================
+    # Create parser for processing CLI arguments
+    # =========================================================================
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -46,7 +57,9 @@ if __name__ == "__main__":
     start_date = datetime.strptime(args.start_date, "%Y-%m-%d")
     end_date = datetime.strptime(args.end_date, "%Y-%m-%d")
 
-    # Load data from local file to MinIO
+    # =========================================================================
+    # Ingest data from `Silver` to `Gold`
+    # =========================================================================
     pipeline_module = get_pipeline_module(args.pipeline_name)
     pipeline = pipeline_module.DataPipeline(
         source=source, target=target, start_date=start_date, end_date=end_date

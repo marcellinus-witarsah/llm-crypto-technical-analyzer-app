@@ -2,8 +2,8 @@ from datetime import datetime
 
 from psycopg2 import sql
 
+from src.timescaledb_ops import TimescaleDBOps
 from src.utils.logger import logger
-from src.utils.timescaledb_ops import TimescaleDBOps
 
 
 class DataPipeline:

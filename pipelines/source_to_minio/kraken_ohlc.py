@@ -1,13 +1,13 @@
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import pandas as pd
 from dotenv import load_dotenv
 
-from src.extractors.kraken import KrakenRestAPI
-from src.schemas.ohlc import OHLC
+from src.extractors.kraken_extractor import KrakenExtractor
+from src.minio_ops import MinioOPS
+from src.model.ohlc import OHLC
 from src.utils.logger import logger
-from src.utils.minio_ops import MinioOPS
 
 
 class DataPipeline:
@@ -25,19 +25,19 @@ class DataPipeline:
             f"Data will be ingested from Kraken REST API to MinIO ({self.start_date.strftime('%Y-%m-%d')} to {self.end_date.strftime('%Y-%m-%d')})"
         )
         try:
-            ####################################################################
-            # 1. REQUEST HOURLY DATA FROM KRAKEN REST API
-            ####################################################################
-            kraken_rest_api = KrakenRestAPI()
+            # =========================================================================
+            # Request 4 hourly data from Kraken REST API
+            # =========================================================================
+            kraken_rest_api = KrakenExtractor()
             response = kraken_rest_api.get_ohlc_data(
                 pair=self.pair,
                 interval=self.interval,
                 since=int(self.start_date.timestamp()),
             )
 
-            ####################################################################
-            # 2. PROCESS HOURLY DATA FROM KRAKEN REST API
-            ####################################################################
+            # =========================================================================
+            # Process 4 hourly data from Kraken REST API
+            # =========================================================================
             data = response.get("result", {}).get("XXBTZUSD", [])
             data = [
                 OHLC(
@@ -54,9 +54,9 @@ class DataPipeline:
             ]  # use pydantic model for data validation and then convert it into a dictionary
             logger.info("Loaded OHLC Hourly Data from Kraken REST API")
 
-            ####################################################################
-            # 3. CREATE `STAGING AREA` BEFORE INSERTING INTO `MINIO``
-            ####################################################################
+            # =========================================================================
+            # Create `staging` area before inserting into `MinIO`
+            # =========================================================================
             file = f"{self.start_date.strftime('%Y%m%d')}_{self.end_date.strftime('%Y%m%d')}_{self.pair}_ohlc_{self.interval}.parquet"
             pd.DataFrame(data).to_parquet(
                 f"tmp/{file}",
@@ -64,9 +64,9 @@ class DataPipeline:
             )
             logger.info("Save OHLC Hourly Data from Kraken REST API")
 
-            ####################################################################
-            # 4. COPY FILE FROM `STAGING AREA` INTO `MINIO``
-            ####################################################################
+            # =========================================================================
+            # Copy file from `staging` area into `MinIO`
+            # =========================================================================
             minio_ops = MinioOPS()
             minio_ops.create_bucket(os.getenv("BUCKET_NAME"))
             minio_ops.write_object(

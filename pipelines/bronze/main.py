@@ -1,9 +1,18 @@
 import argparse
 import importlib
 from datetime import datetime
+from types import ModuleType
 
 
-def get_pipeline_module(pipeline_name: str):
+def get_pipeline_module(pipeline_name: str) -> ModuleType:
+    """Get a pipeline by name inside the bronze folder.
+
+    Args:
+        pipeline_name (str): pipeline name.
+
+    Returns:
+        ModuleType: imported module.
+    """
     try:
         data_pipeline = importlib.import_module(f"pipelines.bronze.{pipeline_name}")
     except ImportError:
@@ -12,6 +21,9 @@ def get_pipeline_module(pipeline_name: str):
 
 
 if __name__ == "__main__":
+    # =========================================================================
+    # Create parser for processing CLI arguments
+    # =========================================================================
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -54,7 +66,9 @@ if __name__ == "__main__":
     end_date = datetime.strptime(args.end_date, "%Y-%m-%d")
     batch_size = args.batch_size
 
-    # Load data from local file to MinIO
+    # =========================================================================
+    # Ingest data from MinIO to `bronze` schema inside TimescaleDB
+    # =========================================================================
     pipeline_module = get_pipeline_module(args.pipeline_name)
     pipeline = pipeline_module.DataPipeline(
         pair=pair,

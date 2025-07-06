@@ -2,8 +2,8 @@ from datetime import datetime
 
 import pandas as pd
 
+from src.timescaledb_ops import TimescaleDBOps
 from src.utils.logger import logger
-from src.utils.timescaledb_ops import TimescaleDBOps
 
 
 class DataPipeline:
@@ -20,7 +20,10 @@ class DataPipeline:
         self.end_date = end_date
 
     def run(self):
-        # Read from database
+        # =========================================================================
+        # Read data into TimescaleDB
+        # =========================================================================
+        logger.info("Reading data from TimescaleDB ...")
         db_ops = TimescaleDBOps()
         columns, data = db_ops.read_data(self.source)
         df = pd.DataFrame(data=data, columns=columns)
@@ -29,17 +32,24 @@ class DataPipeline:
         df = df.sort_values("date").reset_index(
             drop=True
         )  # sort by date ensure that the calculations are correct
+        logger.info("Successfully read data from TimescaleDB.")
 
-        # EMA
+        # =========================================================================
+        # Calculate EMA
+        # =========================================================================
         df["ema_13"] = df["close"].ewm(span=13, adjust=False).mean()
         df["ema_21"] = df["close"].ewm(span=21, adjust=False).mean()
 
-        # Stochastic
+        # =========================================================================
+        # Calculate Stochastic
+        # =========================================================================
         percentage_k_length = 5
         percentage_k_smoothing = 3
         percentage_d_length = 3
+
         lowest_low = df["low"].rolling(percentage_k_length).min()
         highest_high = df["high"].rolling(percentage_k_length).max()
+
         df["stochastic_percentage_k"] = (
             ((df["close"] - lowest_low) / (highest_high - lowest_low))
             .rolling(percentage_k_smoothing)
@@ -49,16 +59,23 @@ class DataPipeline:
             df["stochastic_percentage_k"].rolling(percentage_d_length).mean()
         )
 
-        # MACD
+        # =========================================================================
+        # Calculate MACD
+        # =========================================================================
         ema_12 = df["close"].ewm(span=12, adjust=False).mean()
         ema_26 = df["close"].ewm(span=26, adjust=False).mean()
+
         macd = ema_12 - ema_26
         macd_signal_line = macd.ewm(span=9, adjust=False).mean()
         macd_bar = macd - macd_signal_line
+
         df["macd"] = macd
         df["macd_signal_line"] = macd_signal_line
         df["macd_bar"] = macd_bar
 
+        # =========================================================================
+        # Ingest data into TimescaleDB
+        # =========================================================================
         db_ops.batch_insert_data(
             schema=self.target.split(".")[0],
             table=self.target.split(".")[1],

@@ -17,6 +17,11 @@ class MinioOPS:
         )
 
     def create_bucket(self, bucket_name: str):
+        """Create bucket inside MinIO
+
+        Args:
+            bucket_name (str): bucket name that you want to create.
+        """
         found = self.__client.bucket_exists(bucket_name)
         if not found:
             self.__client.make_bucket(bucket_name)
@@ -25,6 +30,13 @@ class MinioOPS:
             logger.error(f"Bucket '{bucket_name}' already exists.")
 
     def write_object(self, bucket_name: str, destination_file: str, source_file: str):
+        """Create an object inside the bucket
+
+        Args:
+            bucket_name (str): bucket name that you want to write.
+            destination_file (str): file name where the object stored.
+            source_file (str): local file.
+        """
         try:
             self.__client.fput_object(bucket_name, destination_file, source_file)
             logger.info(
@@ -36,6 +48,15 @@ class MinioOPS:
             )
 
     def read_object(self, bucket_name: str, object_name: str) -> bytes:
+        """Read object data from bucket
+
+        Args:
+            bucket_name (str): bucket name that you want to read.
+            object_name (str): object name/path that you want to read.
+
+        Returns:
+            bytes: object data.
+        """
         try:
             response = self.__client.get_object(bucket_name, object_name)
             data = response.data

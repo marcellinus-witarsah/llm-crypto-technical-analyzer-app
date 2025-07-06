@@ -2,7 +2,7 @@ import os
 
 import psycopg2
 from dotenv import load_dotenv
-from psycopg2 import extras, sql
+from psycopg2 import sql
 
 from src.utils.logger import logger
 
@@ -17,6 +17,7 @@ class TimescaleDBOps:
             host=os.getenv("POSTGRES_HOST"),
             port=os.getenv("POSTGRES_PORT"),
         )
+        logger.info(f"Connection to TimescaleDB created successfully.")
 
     def create_table(self, table_name: str, columns: dict, primary_key=None):
         """Create a table in the TimescaleDB database"""
